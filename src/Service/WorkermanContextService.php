@@ -7,6 +7,9 @@ use Symfony\Component\DependencyInjection\Attribute\Autoconfigure;
 use Symfony\Component\DependencyInjection\Attribute\AutowireDecorated;
 use Tourze\Symfony\RuntimeContextBundle\Service\ContextServiceInterface;
 use Workerman\Coroutine;
+use Workerman\Events\Fiber;
+use Workerman\Events\Swoole;
+use Workerman\Events\Swow;
 use Workerman\Worker;
 
 #[Autoconfigure(public: true)]
@@ -19,9 +22,19 @@ class WorkermanContextService implements ContextServiceInterface
     {
     }
 
+    private function isCoroutineEventLoop(): bool
+    {
+        $loop = Worker::getEventLoop();
+        return in_array($loop::class, [
+            Swoole::class,
+            Swow::class,
+            Fiber::class,
+        ]);
+    }
+
     public function getId(): string
     {
-        if (!Worker::isRunning()) {
+        if (!Worker::isRunning() || !$this->isCoroutineEventLoop()) {
             return $this->inner->getId();
         }
         return Coroutine::getCurrent()->id();
@@ -29,7 +42,7 @@ class WorkermanContextService implements ContextServiceInterface
 
     public function defer(callable $callback): void
     {
-        if (!Worker::isRunning()) {
+        if (!Worker::isRunning() || !$this->isCoroutineEventLoop()) {
             $this->inner->defer($callback);
             return;
         }
@@ -38,10 +51,10 @@ class WorkermanContextService implements ContextServiceInterface
 
     public function supportCoroutine(): bool
     {
-        if (!Worker::isRunning()) {
+        if (!Worker::isRunning() || !$this->isCoroutineEventLoop()) {
             return $this->inner->supportCoroutine();
         }
-        return Coroutine::isCoroutine();
+        return $this->isCoroutineEventLoop();
     }
 
     public function reset(): void
