@@ -7,6 +7,9 @@ use Symfony\Component\DependencyInjection\Attribute\Autoconfigure;
 use Symfony\Component\DependencyInjection\Attribute\AutowireDecorated;
 use Tourze\Symfony\RuntimeContextBundle\Service\ContextServiceInterface;
 use Workerman\Coroutine;
+use Workerman\Coroutine\Coroutine\Fiber as FiberCoroutine;
+use Workerman\Coroutine\Coroutine\Swoole as SwooleCoroutine;
+use Workerman\Coroutine\Coroutine\Swow as SwowCoroutine;
 use Workerman\Events\Fiber;
 use Workerman\Events\Swoole;
 use Workerman\Events\Swow;
@@ -40,9 +43,9 @@ class WorkermanContextService implements ContextServiceInterface
 
         $current = Coroutine::getCurrent();
         $prefix = match ($current::class) {
-            Fiber::class => 'fiber',
-            Swoole::class => 'swoole',
-            Swow::class => 'swow',
+            FiberCoroutine::class => 'fiber',
+            SwooleCoroutine::class => 'swoole',
+            SwowCoroutine::class => 'swow',
             default => 'default',
         };
         return "{$prefix}-{$current->id()}";
