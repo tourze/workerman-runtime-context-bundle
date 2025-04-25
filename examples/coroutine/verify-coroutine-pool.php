@@ -10,7 +10,7 @@
 // 引用根项目的autoload.php，而不是当前包的vendor目录
 require_once __DIR__ . '/../../../../vendor/autoload.php';
 
-use Tourze\Workerman\MasterKillber\MasterKiller;
+use Tourze\Workerman\MasterKiller\MasterKiller;
 use Tourze\Workerman\PsrLogger\WorkermanLogger;
 use Workerman\Connection\TcpConnection;
 use Workerman\Coroutine;
