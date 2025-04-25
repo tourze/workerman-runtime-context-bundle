@@ -37,7 +37,15 @@ class WorkermanContextService implements ContextServiceInterface
         if (!Worker::isRunning() || !$this->isCoroutineEventLoop()) {
             return $this->inner->getId();
         }
-        return Coroutine::getCurrent()->id();
+
+        $current = Coroutine::getCurrent();
+        $prefix = match ($current::class) {
+            Fiber::class => 'fiber',
+            Swoole::class => 'swoole',
+            Swow::class => 'swow',
+            default => 'default',
+        };
+        return "{$prefix}-{$current->id()}";
     }
 
     public function defer(callable $callback): void
