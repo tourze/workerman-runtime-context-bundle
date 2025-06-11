@@ -104,7 +104,7 @@ $worker->onWorkerStart = function () {
                 cecho("测试完成，退出进程");
                 (new MasterKiller(new WorkermanLogger()))->killMaster();
             }, [], false);
-        } catch  (\Throwable $e) {
+        } catch (\Throwable $e) {
             echo "\033[31m" . date('Y-m-d H:i:s') . " [ERROR] 触发测试失败: " . $e->getMessage() . "\033[0m\n";
             (new MasterKiller(new WorkermanLogger()))->killMaster();
         }
