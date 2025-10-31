@@ -3,7 +3,6 @@
 namespace Tourze\WorkermanRuntimeContextBundle\Service;
 
 use Symfony\Component\DependencyInjection\Attribute\AsDecorator;
-use Symfony\Component\DependencyInjection\Attribute\Autoconfigure;
 use Symfony\Component\DependencyInjection\Attribute\AutowireDecorated;
 use Tourze\Symfony\RuntimeContextBundle\Service\ContextServiceInterface;
 use Workerman\Coroutine;
@@ -15,24 +14,23 @@ use Workerman\Events\Swoole;
 use Workerman\Events\Swow;
 use Workerman\Worker;
 
-#[Autoconfigure(public: true)]
 #[AsDecorator(decorates: ContextServiceInterface::class)]
-class WorkermanContextService implements ContextServiceInterface
+readonly class WorkermanContextService implements ContextServiceInterface
 {
     public function __construct(
-        #[AutowireDecorated] private readonly ContextServiceInterface $inner,
-    )
-    {
+        #[AutowireDecorated] private ContextServiceInterface $inner,
+    ) {
     }
 
     private function isCoroutineEventLoop(): bool
     {
         $loop = Worker::getEventLoop();
+
         return in_array($loop::class, [
             Swoole::class,
             Swow::class,
             Fiber::class,
-        ]);
+        ], true);
     }
 
     public function getId(): string
@@ -48,6 +46,7 @@ class WorkermanContextService implements ContextServiceInterface
             SwowCoroutine::class => 'swow',
             default => 'default',
         };
+
         return "{$prefix}-{$current->id()}";
     }
 
@@ -55,6 +54,7 @@ class WorkermanContextService implements ContextServiceInterface
     {
         if (!Worker::isRunning() || !$this->isCoroutineEventLoop()) {
             $this->inner->defer($callback);
+
             return;
         }
         Coroutine::defer($callback);
@@ -65,6 +65,7 @@ class WorkermanContextService implements ContextServiceInterface
         if (!Worker::isRunning() || !$this->isCoroutineEventLoop()) {
             return $this->inner->supportCoroutine();
         }
+
         return $this->isCoroutineEventLoop();
     }
 

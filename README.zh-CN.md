@@ -3,8 +3,11 @@
 [English](README.md) | [中文](README.zh-CN.md)
 
 [![Latest Version](https://img.shields.io/packagist/v/tourze/workerman-runtime-context-bundle.svg?style=flat-square)](https://packagist.org/packages/tourze/workerman-runtime-context-bundle)
+[![PHP Version](https://img.shields.io/packagist/php-v/tourze/workerman-runtime-context-bundle.svg?style=flat-square)](https://packagist.org/packages/tourze/workerman-runtime-context-bundle)
+[![License](https://img.shields.io/packagist/l/tourze/workerman-runtime-context-bundle.svg?style=flat-square)](https://packagist.org/packages/tourze/workerman-runtime-context-bundle)
 [![Build Status](https://img.shields.io/travis/tourze/workerman-runtime-context-bundle/master.svg?style=flat-square)](https://travis-ci.org/tourze/workerman-runtime-context-bundle)
 [![Quality Score](https://img.shields.io/scrutinizer/g/tourze/workerman-runtime-context-bundle.svg?style=flat-square)](https://scrutinizer-ci.com/g/tourze/workerman-runtime-context-bundle)
+[![Code Coverage](https://img.shields.io/scrutinizer/coverage/g/tourze/workerman-runtime-context-bundle.svg?style=flat-square)](https://scrutinizer-ci.com/g/tourze/workerman-runtime-context-bundle)
 [![Total Downloads](https://img.shields.io/packagist/dt/tourze/workerman-runtime-context-bundle.svg?style=flat-square)](https://packagist.org/packages/tourze/workerman-runtime-context-bundle)
 
 一个为 Workerman v5 事件循环提供高效协程上下文管理的 Symfony Bundle，实现了协程隔离与兼容的服务注入，几乎无需修改现有代码。

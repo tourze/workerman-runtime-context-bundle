@@ -1,4 +1,5 @@
 <?php
+
 /**
  * 验证Workerman v5 Fiber协程池和上下文管理测试脚本
  *
@@ -10,7 +11,7 @@
 // 引用根项目的autoload.php，而不是当前包的vendor目录
 require_once __DIR__ . '/../../../../vendor/autoload.php';
 
-use Tourze\Workerman\MasterKiller\MasterKiller;
+use Tourze\Workerman\MasterKiller\DefaultMasterKiller;
 use Tourze\Workerman\PsrLogger\WorkermanLogger;
 use Workerman\Connection\TcpConnection;
 use Workerman\Coroutine;
@@ -31,11 +32,11 @@ $worker->reloadable = false;
 // 控制台输出函数
 function cecho(string $message): void
 {
-    echo "\033[36m" . date('Y-m-d H:i:s') . " [INFO] " . $message . "\033[0m\n";
+    echo "\033[36m" . date('Y-m-d H:i:s') . ' [INFO] ' . $message . "\033[0m\n";
 }
 
-cecho("启动Workerman Fiber协程池上下文测试服务器在 text://0.0.0.0:12346");
-cecho("测试将在工作进程启动后自动运行");
+cecho('启动Workerman Fiber协程池上下文测试服务器在 text://0.0.0.0:12346');
+cecho('测试将在工作进程启动后自动运行');
 
 /**
  * 模拟Redis连接类
@@ -58,12 +59,14 @@ class MockRedis
     public function connect(string $host, int $port): bool
     {
         cecho("MockRedis {$this->id} 连接到 {$host}:{$port}");
+
         return true;
     }
 
     public function set(string $key, string $value): bool
     {
         cecho("MockRedis {$this->id} 设置 {$key} = {$value}");
+
         return true;
     }
 
@@ -71,6 +74,7 @@ class MockRedis
     {
         $value = "value_for_{$key}_from_{$this->id}";
         cecho("MockRedis {$this->id} 获取 {$key} = {$value}");
+
         return $value;
     }
 
@@ -82,6 +86,7 @@ class MockRedis
     public function ping(): bool
     {
         cecho("Ping MockRedis {$this->id}");
+
         return true;
     }
 }
@@ -101,11 +106,12 @@ class RedisPool
         $this->pool->setConnectionCreator(function () use ($host, $port) {
             $redis = new MockRedis();
             $redis->connect($host, $port);
+
             return $redis;
         });
 
         // 设置连接关闭器
-        $this->pool->setConnectionCloser(function ($redis) {
+        $this->pool->setConnectionCloser(function ($redis): void {
             $redis->close();
         });
 
@@ -121,6 +127,7 @@ class RedisPool
     {
         $redis = $this->pool->get();
         cecho("从连接池获取Redis连接: {$redis->getId()}");
+
         return $redis;
     }
 
@@ -143,9 +150,9 @@ class Db
      */
     private static function initializePool(): void
     {
-        if (self::$pool === null) {
+        if (null === self::$pool) {
             self::$pool = new RedisPool('127.0.0.1', 6379, 3);
-            cecho("Db类初始化了Redis连接池");
+            cecho('Db类初始化了Redis连接池');
         }
     }
 
@@ -166,9 +173,9 @@ class Db
             Context::set('redis', $redis);
 
             // 当协程销毁时，将连接返回到池中
-            Coroutine::defer(function () use ($redis) {
+            Coroutine::defer(function () use ($redis): void {
                 self::$pool->put($redis);
-                cecho("协程结束，已通过defer归还Redis连接");
+                cecho('协程结束，已通过defer归还Redis连接');
             });
         }
 
@@ -178,12 +185,12 @@ class Db
 }
 
 // Worker启动事件
-$worker->onWorkerStart = function () {
-    cecho("工作进程已启动");
+$worker->onWorkerStart = function (): void {
+    cecho('工作进程已启动');
 
     // 延迟2秒后直接触发测试，不依赖外部命令
-    Timer::add(2, function () {
-        cecho("自动触发测试...");
+    Timer::add(2, function (): void {
+        cecho('自动触发测试...');
 
         try {
             // 创建一个与自身的连接来触发测试
@@ -191,40 +198,41 @@ $worker->onWorkerStart = function () {
             if (!$client) {
                 echo "\033[31m" . date('Y-m-d H:i:s') . " [ERROR] 无法连接到测试服务器\033[0m\n";
                 Worker::stopAll();
+
                 return;
             }
 
             // 发送测试数据
             fwrite($client, "test\n");
-            cecho("已发送测试数据");
+            cecho('已发送测试数据');
 
             // 非阻塞模式读取响应
             stream_set_blocking($client, false);
 
             // 等待5秒后终止进程，确保所有输出都显示
-            Timer::add(5, function () {
-                cecho("测试完成，退出进程");
-                (new MasterKiller(new WorkermanLogger()))->killMaster();
+            Timer::add(5, function (): void {
+                cecho('测试完成，退出进程');
+                (new DefaultMasterKiller(new WorkermanLogger()))->killMaster();
             }, [], false);
-        } catch (\Throwable $e) {
-            echo "\033[31m" . date('Y-m-d H:i:s') . " [ERROR] 触发测试失败: " . $e->getMessage() . "\033[0m\n";
-            (new MasterKiller(new WorkermanLogger()))->killMaster();
+        } catch (Throwable $e) {
+            echo "\033[31m" . date('Y-m-d H:i:s') . ' [ERROR] 触发测试失败: ' . $e->getMessage() . "\033[0m\n";
+            (new DefaultMasterKiller(new WorkermanLogger()))->killMaster();
         }
     }, [], false);
 };
 
 // Worker接收消息事件
-$worker->onMessage = function (TcpConnection $connection, $data) {
+$worker->onMessage = function (TcpConnection $connection, $data): void {
     $requestId = uniqid('req_');
-    cecho("收到连接请求: $requestId");
+    cecho("收到连接请求: {$requestId}");
 
     // 设置协程上下文ID，以便跟踪
     Context::set('request_id', $requestId);
 
     $result = [
         'requestId' => $requestId,
-        'mainFiberId' => spl_object_id(\Fiber::getCurrent()),
-        'operations' => []
+        'mainFiberId' => spl_object_id(Fiber::getCurrent()),
+        'operations' => [],
     ];
 
     // 测试1: 在主协程中使用Db类
@@ -232,14 +240,14 @@ $worker->onMessage = function (TcpConnection $connection, $data) {
     $value1 = Db::get($key1);
     $result['operations'][] = [
         'step' => 1,
-        'fiberId' => spl_object_id(\Fiber::getCurrent()),
+        'fiberId' => spl_object_id(Fiber::getCurrent()),
         'action' => "主协程获取 {$key1}",
         'value' => $value1,
-        'redisId' => Context::get('redis')->getId()
+        'redisId' => Context::get('redis')->getId(),
     ];
 
     // 测试2: 在子协程中使用Db类
-    Coroutine::create(function () use ($connection, $requestId, &$result) {
+    Coroutine::create(function () use ($connection, $requestId, &$result): void {
         // 验证协程上下文隔离
         $current_request_id = Context::get('request_id');
 
@@ -248,11 +256,11 @@ $worker->onMessage = function (TcpConnection $connection, $data) {
 
         $result['operations'][] = [
             'step' => 2,
-            'fiberId' => spl_object_id(\Fiber::getCurrent()),
+            'fiberId' => spl_object_id(Fiber::getCurrent()),
             'action' => "子协程获取 {$key2}",
             'value' => $value2,
             'redisId' => Context::get('redis')->getId(),
-            'requestIdInContext' => $current_request_id
+            'requestIdInContext' => $current_request_id,
         ];
 
         // 测试3: 再次使用相同的协程上下文
@@ -261,24 +269,24 @@ $worker->onMessage = function (TcpConnection $connection, $data) {
 
         $result['operations'][] = [
             'step' => 3,
-            'fiberId' => spl_object_id(\Fiber::getCurrent()),
+            'fiberId' => spl_object_id(Fiber::getCurrent()),
             'action' => "子协程再次获取 {$key3}",
             'value' => $value3,
-            'redisId' => Context::get('redis')->getId()
+            'redisId' => Context::get('redis')->getId(),
         ];
 
         // 测试4: 嵌套协程
-        Coroutine::create(function () use ($connection, $requestId, &$result) {
+        Coroutine::create(function () use ($connection, $requestId, &$result): void {
             $key4 = "key4_{$requestId}";
             $value4 = Db::get($key4); // 这将获取另一个新连接
 
             $result['operations'][] = [
                 'step' => 4,
-                'fiberId' => spl_object_id(\Fiber::getCurrent()),
+                'fiberId' => spl_object_id(Fiber::getCurrent()),
                 'action' => "嵌套协程获取 {$key4}",
                 'value' => $value4,
                 'redisId' => Context::get('redis')->getId(),
-                'requestIdInContext' => Context::get('request_id')
+                'requestIdInContext' => Context::get('request_id'),
             ];
 
             // 发送结果并验证
@@ -288,23 +296,23 @@ $worker->onMessage = function (TcpConnection $connection, $data) {
             $uniqueFiberIds = count(array_unique(array_column($result['operations'], 'fiberId')));
             $uniqueRedisIds = count(array_unique(array_column($result['operations'], 'redisId')));
 
-            cecho("测试总结:");
-            cecho("- 总操作数: " . count($result['operations']));
+            cecho('测试总结:');
+            cecho('- 总操作数: ' . count($result['operations']));
             cecho("- 不同Fiber ID数: {$uniqueFiberIds}");
             cecho("- 不同Redis连接数: {$uniqueRedisIds}");
 
             // 协程ID应该是唯一的
-            if ($uniqueFiberIds === 3) { // 主协程、子协程、嵌套协程
-                cecho("✅ 协程ID测试通过：每个协程有唯一的ID");
+            if (3 === $uniqueFiberIds) { // 主协程、子协程、嵌套协程
+                cecho('✅ 协程ID测试通过：每个协程有唯一的ID');
             } else {
-                cecho("❌ 协程ID测试失败：协程ID不唯一");
+                cecho('❌ 协程ID测试失败：协程ID不唯一');
             }
 
             // 检查连接池是否正常工作
             if ($uniqueRedisIds <= 3) { // 最多3个连接（连接池大小）
-                cecho("✅ 连接池测试通过：连接池正常工作");
+                cecho('✅ 连接池测试通过：连接池正常工作');
             } else {
-                cecho("❌ 连接池测试失败：连接池未限制连接数");
+                cecho('❌ 连接池测试失败：连接池未限制连接数');
             }
 
             // 检查requestId在不同协程之间是否正确隔离
@@ -316,13 +324,13 @@ $worker->onMessage = function (TcpConnection $connection, $data) {
             );
 
             $allNull = array_reduce($requestIds, function ($carry, $item) {
-                return $carry && ($item === null);
+                return $carry && (null === $item);
             }, true);
 
             if ($allNull || count(array_unique($requestIds)) > 1) {
-                cecho("✅ 上下文隔离测试通过：不同协程的上下文正确隔离");
+                cecho('✅ 上下文隔离测试通过：不同协程的上下文正确隔离');
             } else {
-                cecho("❌ 上下文隔离测试失败：上下文在协程间泄漏");
+                cecho('❌ 上下文隔离测试失败：上下文在协程间泄漏');
             }
         });
     });

@@ -3,8 +3,11 @@
 [English](README.md) | [中文](README.zh-CN.md)
 
 [![Latest Version](https://img.shields.io/packagist/v/tourze/workerman-runtime-context-bundle.svg?style=flat-square)](https://packagist.org/packages/tourze/workerman-runtime-context-bundle)
+[![PHP Version](https://img.shields.io/packagist/php-v/tourze/workerman-runtime-context-bundle.svg?style=flat-square)](https://packagist.org/packages/tourze/workerman-runtime-context-bundle)
+[![License](https://img.shields.io/packagist/l/tourze/workerman-runtime-context-bundle.svg?style=flat-square)](https://packagist.org/packages/tourze/workerman-runtime-context-bundle)
 [![Build Status](https://img.shields.io/travis/tourze/workerman-runtime-context-bundle/master.svg?style=flat-square)](https://travis-ci.org/tourze/workerman-runtime-context-bundle)
 [![Quality Score](https://img.shields.io/scrutinizer/g/tourze/workerman-runtime-context-bundle.svg?style=flat-square)](https://scrutinizer-ci.com/g/tourze/workerman-runtime-context-bundle)
+[![Code Coverage](https://img.shields.io/scrutinizer/coverage/g/tourze/workerman-runtime-context-bundle.svg?style=flat-square)](https://scrutinizer-ci.com/g/tourze/workerman-runtime-context-bundle)
 [![Total Downloads](https://img.shields.io/packagist/dt/tourze/workerman-runtime-context-bundle.svg?style=flat-square)](https://packagist.org/packages/tourze/workerman-runtime-context-bundle)
 
 A Symfony bundle that enables efficient coroutine context management for Workerman v5 event loop, providing context isolation and coroutine-friendly service integration with minimal code changes.

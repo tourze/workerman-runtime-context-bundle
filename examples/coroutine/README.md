@@ -12,7 +12,7 @@ Tests whether Workerman v5 Fiber coroutine context IDs are properly isolated.
 
 ```bash
 # Run from the project root directory
-php packages/workerman-server-bundle/examples/coroutine/verify-fiber-context.php
+php packages/workerman-runtime-context-bundle/examples/coroutine/verify-fiber-context.php
 
 # The test will run automatically, no manual triggering needed
 ```
@@ -23,7 +23,7 @@ Tests context isolation and connection reuse in a connection pool.
 
 ```bash
 # Run from the project root directory
-php packages/workerman-server-bundle/examples/coroutine/verify-coroutine-pool.php
+php packages/workerman-runtime-context-bundle/examples/coroutine/verify-coroutine-pool.php
 
 # The test will run automatically, no manual triggering needed
 ```
@@ -34,7 +34,7 @@ Tests different concurrency models (Serial, Parallel, Barrier, Channel) for perf
 
 ```bash
 # Run from the project root directory
-php packages/workerman-server-bundle/examples/coroutine/verify-parallel-barrier.php
+php packages/workerman-runtime-context-bundle/examples/coroutine/verify-parallel-barrier.php
 
 # The test will run automatically, no manual triggering needed
 ```

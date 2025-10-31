@@ -1,8 +1,8 @@
-# Workerman Server Bundle Examples
+# Workerman Runtime Context Bundle Examples
 
 [English](README.md) | [中文](README.zh-CN.md)
 
-This directory contains various examples and test scripts for Workerman Server Bundle, demonstrating how to use the package's features.
+This directory contains various examples and test scripts for Workerman Runtime Context Bundle, demonstrating how to use the package's features.
 
 ## Available Examples
 

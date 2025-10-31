@@ -12,7 +12,7 @@
 
 ```bash
 # 从项目根目录运行
-php packages/workerman-server-bundle/examples/coroutine/verify-fiber-context.php
+php packages/workerman-runtime-context-bundle/examples/coroutine/verify-fiber-context.php
 
 # 测试将自动运行，无需手动触发
 ```
@@ -23,7 +23,7 @@ php packages/workerman-server-bundle/examples/coroutine/verify-fiber-context.php
 
 ```bash
 # 从项目根目录运行
-php packages/workerman-server-bundle/examples/coroutine/verify-coroutine-pool.php
+php packages/workerman-runtime-context-bundle/examples/coroutine/verify-coroutine-pool.php
 
 # 测试将自动运行，无需手动触发
 ```
@@ -34,7 +34,7 @@ php packages/workerman-server-bundle/examples/coroutine/verify-coroutine-pool.ph
 
 ```bash
 # 从项目根目录运行
-php packages/workerman-server-bundle/examples/coroutine/verify-parallel-barrier.php
+php packages/workerman-runtime-context-bundle/examples/coroutine/verify-parallel-barrier.php
 
 # 测试将自动运行，无需手动触发
 ```

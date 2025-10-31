@@ -1,4 +1,5 @@
 <?php
+
 /**
  * 验证Workerman v5 Fiber协程并发模型（Parallel和Barrier）测试脚本
  *
@@ -10,7 +11,7 @@
 // 引用根项目的autoload.php，而不是当前包的vendor目录
 require_once __DIR__ . '/../../../../vendor/autoload.php';
 
-use Tourze\Workerman\MasterKiller\MasterKiller;
+use Tourze\Workerman\MasterKiller\DefaultMasterKiller;
 use Tourze\Workerman\PsrLogger\WorkermanLogger;
 use Workerman\Connection\TcpConnection;
 use Workerman\Coroutine;
@@ -33,29 +34,30 @@ $worker->reloadable = false;
 // 控制台输出函数
 function cecho(string $message): void
 {
-    echo "\033[36m" . date('Y-m-d H:i:s') . " [INFO] " . $message . "\033[0m\n";
+    echo "\033[36m" . date('Y-m-d H:i:s') . ' [INFO] ' . $message . "\033[0m\n";
 }
 
-cecho("启动Workerman Fiber并发模型测试服务器在 text://0.0.0.0:12347");
-cecho("测试将在工作进程启动后自动运行");
+cecho('启动Workerman Fiber并发模型测试服务器在 text://0.0.0.0:12347');
+cecho('测试将在工作进程启动后自动运行');
 
 /**
  * 模拟异步任务
  *
- * @param string $taskId 任务ID
- * @param float $duration 任务持续时间（秒）
+ * @param string $taskId   任务ID
+ * @param float  $duration 任务持续时间（秒）
+ *
  * @return array 任务结果
  */
 function asyncTask(string $taskId, float $duration = 0.5): array
 {
-    $fiberId = spl_object_id(\Fiber::getCurrent());
+    $fiberId = spl_object_id(Fiber::getCurrent());
     $startTime = microtime(true);
 
     cecho("任务 {$taskId} 开始 (Fiber ID: {$fiberId})");
 
     // 使用Timer模拟延迟
     $wait = new Channel();
-    Timer::add($duration, function () use ($wait) {
+    Timer::add($duration, function () use ($wait): void {
         $wait->push(1);
     }, [], false);
     $wait->pop();
@@ -71,17 +73,17 @@ function asyncTask(string $taskId, float $duration = 0.5): array
         'startTime' => $startTime,
         'endTime' => $endTime,
         'executionTime' => $executionTime,
-        'contextId' => Context::get('request_id') ?? null
+        'contextId' => Context::get('request_id') ?? null,
     ];
 }
 
 // Worker启动事件
-$worker->onWorkerStart = function () {
-    cecho("工作进程已启动");
+$worker->onWorkerStart = function (): void {
+    cecho('工作进程已启动');
 
     // 延迟2秒后直接触发测试，不依赖外部命令
-    Timer::add(2, function () {
-        cecho("自动触发测试...");
+    Timer::add(2, function (): void {
+        cecho('自动触发测试...');
 
         try {
             // 创建一个与自身的连接来触发测试
@@ -89,50 +91,51 @@ $worker->onWorkerStart = function () {
             if (!$client) {
                 echo "\033[31m" . date('Y-m-d H:i:s') . " [ERROR] 无法连接到测试服务器\033[0m\n";
                 Worker::stopAll();
+
                 return;
             }
 
             // 发送测试数据
             fwrite($client, "test\n");
-            cecho("已发送测试数据");
+            cecho('已发送测试数据');
 
             // 非阻塞模式读取响应
             stream_set_blocking($client, false);
 
             // 等待8秒后终止进程，确保所有输出都显示
-            Timer::add(8, function () {
-                cecho("测试完成，退出进程");
-                (new MasterKiller(new WorkermanLogger()))->killMaster();
+            Timer::add(8, function (): void {
+                cecho('测试完成，退出进程');
+                (new DefaultMasterKiller(new WorkermanLogger()))->killMaster();
             }, [], false);
-        } catch (\Throwable $e) {
-            echo "\033[31m" . date('Y-m-d H:i:s') . " [ERROR] 触发测试失败: " . $e->getMessage() . "\033[0m\n";
-            (new MasterKiller(new WorkermanLogger()))->killMaster();
+        } catch (Throwable $e) {
+            echo "\033[31m" . date('Y-m-d H:i:s') . ' [ERROR] 触发测试失败: ' . $e->getMessage() . "\033[0m\n";
+            (new DefaultMasterKiller(new WorkermanLogger()))->killMaster();
         }
     }, [], false);
 };
 
 // Worker接收消息事件
-$worker->onMessage = function (TcpConnection $connection, $data) {
+$worker->onMessage = function (TcpConnection $connection, $data): void {
     $requestId = uniqid('req_');
-    cecho("收到连接请求: $requestId");
+    cecho("收到连接请求: {$requestId}");
 
     // 设置协程上下文ID
     Context::set('request_id', $requestId);
 
     $result = [
         'requestId' => $requestId,
-        'mainFiberId' => spl_object_id(\Fiber::getCurrent()),
-        'tests' => []
+        'mainFiberId' => spl_object_id(Fiber::getCurrent()),
+        'tests' => [],
     ];
 
     // 测试1: 串行执行任务
     $serialStart = microtime(true);
-    cecho("开始串行测试...");
+    cecho('开始串行测试...');
 
     $serialResults = [];
-    $serialResults[] = asyncTask("serial_1", 0.5);
-    $serialResults[] = asyncTask("serial_2", 0.5);
-    $serialResults[] = asyncTask("serial_3", 0.5);
+    $serialResults[] = asyncTask('serial_1', 0.5);
+    $serialResults[] = asyncTask('serial_2', 0.5);
+    $serialResults[] = asyncTask('serial_3', 0.5);
 
     $serialEnd = microtime(true);
     $serialTime = $serialEnd - $serialStart;
@@ -141,22 +144,22 @@ $worker->onMessage = function (TcpConnection $connection, $data) {
 
     $result['tests']['serial'] = [
         'totalTime' => $serialTime,
-        'tasks' => $serialResults
+        'tasks' => $serialResults,
     ];
 
     // 测试2: 使用Parallel并行执行任务
     $parallelStart = microtime(true);
-    cecho("开始Parallel并行测试...");
+    cecho('开始Parallel并行测试...');
 
     $parallel = new Parallel(3);
     $parallel->add(function () {
-        return asyncTask("parallel_1", 0.5);
+        return asyncTask('parallel_1', 0.5);
     });
     $parallel->add(function () {
-        return asyncTask("parallel_2", 0.5);
+        return asyncTask('parallel_2', 0.5);
     });
     $parallel->add(function () {
-        return asyncTask("parallel_3", 0.5);
+        return asyncTask('parallel_3', 0.5);
     });
 
     $parallelResults = $parallel->wait();
@@ -168,12 +171,12 @@ $worker->onMessage = function (TcpConnection $connection, $data) {
 
     $result['tests']['parallel'] = [
         'totalTime' => $parallelTime,
-        'tasks' => $parallelResults
+        'tasks' => $parallelResults,
     ];
 
     // 测试3: 使用Barrier并行执行任务
     $barrierStart = microtime(true);
-    cecho("开始Barrier并行测试...");
+    cecho('开始Barrier并行测试...');
 
     $barrier = new Barrier();
 
@@ -182,18 +185,18 @@ $worker->onMessage = function (TcpConnection $connection, $data) {
     $task2Channel = new Channel();
     $task3Channel = new Channel();
 
-    Coroutine::create(function () use ($task1Channel) {
-        $result = asyncTask("barrier_1", 0.5);
+    Coroutine::create(function () use ($task1Channel): void {
+        $result = asyncTask('barrier_1', 0.5);
         $task1Channel->push($result);
     });
 
-    Coroutine::create(function () use ($task2Channel) {
-        $result = asyncTask("barrier_2", 0.8);
+    Coroutine::create(function () use ($task2Channel): void {
+        $result = asyncTask('barrier_2', 0.8);
         $task2Channel->push($result);
     });
 
-    Coroutine::create(function () use ($task3Channel) {
-        $result = asyncTask("barrier_3", 0.3);
+    Coroutine::create(function () use ($task3Channel): void {
+        $result = asyncTask('barrier_3', 0.3);
         $task3Channel->push($result);
     });
 
@@ -201,7 +204,7 @@ $worker->onMessage = function (TcpConnection $connection, $data) {
     $barrierResults = [
         'task1' => $task1Channel->pop(),
         'task2' => $task2Channel->pop(),
-        'task3' => $task3Channel->pop()
+        'task3' => $task3Channel->pop(),
     ];
 
     $barrierEnd = microtime(true);
@@ -211,33 +214,33 @@ $worker->onMessage = function (TcpConnection $connection, $data) {
 
     $result['tests']['barrier'] = [
         'totalTime' => $barrierTime,
-        'tasks' => $barrierResults
+        'tasks' => $barrierResults,
     ];
 
     // 测试4: 使用Channel进行并行任务
-    cecho("开始Channel测试...");
+    cecho('开始Channel测试...');
     $channelStart = microtime(true);
 
     $channel = new Channel(3);
 
-    Coroutine::create(function () use ($channel) {
-        $result = asyncTask("channel_1", 0.7);
+    Coroutine::create(function () use ($channel): void {
+        $result = asyncTask('channel_1', 0.7);
         $channel->push($result);
     });
 
-    Coroutine::create(function () use ($channel) {
-        $result = asyncTask("channel_2", 0.4);
+    Coroutine::create(function () use ($channel): void {
+        $result = asyncTask('channel_2', 0.4);
         $channel->push($result);
     });
 
-    Coroutine::create(function () use ($channel) {
-        $result = asyncTask("channel_3", 0.6);
+    Coroutine::create(function () use ($channel): void {
+        $result = asyncTask('channel_3', 0.6);
         $channel->push($result);
     });
 
     // 获取所有结果
     $channelResults = [];
-    for ($i = 0; $i < 3; $i++) {
+    for ($i = 0; $i < 3; ++$i) {
         $channelResults[] = $channel->pop();
     }
 
@@ -248,23 +251,23 @@ $worker->onMessage = function (TcpConnection $connection, $data) {
 
     $result['tests']['channel'] = [
         'totalTime' => $channelTime,
-        'tasks' => $channelResults
+        'tasks' => $channelResults,
     ];
 
     // 验证并发模型特性
     $result['summary'] = [
         'serial_vs_parallel' => [
             'speedup' => $serialTime / $parallelTime,
-            'efficiency' => ($serialTime / $parallelTime) / 3
+            'efficiency' => ($serialTime / $parallelTime) / 3,
         ],
         'serial_vs_barrier' => [
             'speedup' => $serialTime / $barrierTime,
-            'efficiency' => ($serialTime / $barrierTime) / 3
+            'efficiency' => ($serialTime / $barrierTime) / 3,
         ],
         'serial_vs_channel' => [
             'speedup' => $serialTime / $channelTime,
-            'efficiency' => ($serialTime / $channelTime) / 3
-        ]
+            'efficiency' => ($serialTime / $channelTime) / 3,
+        ],
     ];
 
     // 收集所有任务的FiberID和上下文ID
@@ -299,19 +302,19 @@ $worker->onMessage = function (TcpConnection $connection, $data) {
         'unique_fiber_ids' => $uniqueFiberIds,
         'total_fiber_ids' => count($fiberIds),
         'expected_unique_fiber_ids' => $expectedUniqueFiberIds,
-        'context_isolation' => count(array_filter($contextIds, function ($id) use ($requestId) {
-                return $id === $requestId;
-            })) === 0
+        'context_isolation' => 0 === count(array_filter($contextIds, function ($id) use ($requestId) {
+            return $id === $requestId;
+        })),
     ];
 
     // 输出验证结果
-    cecho("并发测试验证结果:");
-    cecho("- 总协程数: " . count($fiberIds));
+    cecho('并发测试验证结果:');
+    cecho('- 总协程数: ' . count($fiberIds));
     cecho("- 不同Fiber ID数: {$uniqueFiberIds}");
     cecho("- 预期不同Fiber ID数: {$expectedUniqueFiberIds} (串行任务共享1个ID，并行任务各自1个ID)");
 
     // 打印所有Fiber ID详细信息
-    cecho("所有Fiber ID详细信息:");
+    cecho('所有Fiber ID详细信息:');
     $fiberIdCounts = array_count_values($fiberIds);
     $detailedInfo = [];
 
@@ -320,7 +323,7 @@ $worker->onMessage = function (TcpConnection $connection, $data) {
         $detailedInfo[$testType] = [];
         foreach ($testData['tasks'] as $taskIndex => $task) {
             if (isset($task['fiberId'])) {
-                $taskId = $task['taskId'] ?? "task_$taskIndex";
+                $taskId = $task['taskId'] ?? "task_{$taskIndex}";
                 $detailedInfo[$testType][$taskId] = $task['fiberId'];
             }
         }
@@ -331,8 +334,8 @@ $worker->onMessage = function (TcpConnection $connection, $data) {
         cecho("- {$testType} 测试:");
         foreach ($tasks as $taskId => $fiberId) {
             $count = $fiberIdCounts[$fiberId];
-            $duplicateTag = $count > 1 ? "【重复{$count}次】" : "";
-            $expectation = $testType === 'serial' ? "【正常，串行共享ID】" : "";
+            $duplicateTag = $count > 1 ? "【重复{$count}次】" : '';
+            $expectation = 'serial' === $testType ? '【正常，串行共享ID】' : '';
             cecho("  - {$taskId}: Fiber ID {$fiberId} {$duplicateTag} {$expectation}");
         }
     }
@@ -342,23 +345,23 @@ $worker->onMessage = function (TcpConnection $connection, $data) {
         return $count > 1;
     });
     if (!empty($duplicateFiberIds)) {
-        cecho("重复的Fiber ID:");
+        cecho('重复的Fiber ID:');
         foreach ($duplicateFiberIds as $fiberId => $count) {
             $isSerial = false;
-            foreach ($detailedInfo['serial'] ?? [] as $taskId => $id) {
+            foreach ($detailedInfo['serial'] ?? [] as $id) {
                 if ($id === $fiberId) {
                     $isSerial = true;
                     break;
                 }
             }
-            $normalityTag = $isSerial ? "【正常，串行任务】" : "【异常，并行任务不应共享ID】";
+            $normalityTag = $isSerial ? '【正常，串行任务】' : '【异常，并行任务不应共享ID】';
             cecho("- Fiber ID {$fiberId} 出现了 {$count} 次 {$normalityTag}");
         }
     }
 
     // 验证Fiber ID数量是否符合预期
     if ($uniqueFiberIds === $expectedUniqueFiberIds) {
-        cecho("✅ 协程ID测试通过：Fiber ID数量符合预期特性");
+        cecho('✅ 协程ID测试通过：Fiber ID数量符合预期特性');
     } else {
         cecho("❌ 协程ID测试失败：Fiber ID数量不符合预期，应有 {$expectedUniqueFiberIds} 个不同ID，实际有 {$uniqueFiberIds} 个");
     }
@@ -377,7 +380,7 @@ $worker->onMessage = function (TcpConnection $connection, $data) {
                 if (isset($task['fiberId'])) {
                     $testFiberIds[$task['fiberId']] = true;
                 }
-                if (isset($task['contextId']) && $task['contextId'] !== null) {
+                if (isset($task['contextId']) && null !== $task['contextId']) {
                     $testContextIds[$task['contextId']] = true;
                 }
             }
@@ -393,9 +396,9 @@ $worker->onMessage = function (TcpConnection $connection, $data) {
     }
 
     if (!$parallelContextLeak) {
-        cecho("✅ 并行上下文隔离测试通过：并行任务中没有主协程上下文泄漏");
+        cecho('✅ 并行上下文隔离测试通过：并行任务中没有主协程上下文泄漏');
     } else {
-        cecho("❌ 并行上下文隔离测试失败：并行任务中存在主协程上下文泄漏");
+        cecho('❌ 并行上下文隔离测试失败：并行任务中存在主协程上下文泄漏');
     }
 
     // 发送结果
