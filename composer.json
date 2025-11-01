@@ -10,7 +10,7 @@
     "symfony/property-access": "^7.3",
     "symfony/yaml": "^7.3",
     "tourze/bundle-dependency": "1.*",
-    "tourze/symfony-dependency-service-loader": "1.*",
+    "tourze/symfony-dependency-service-loader": "1.0.*",
     "tourze/symfony-runtime-context-bundle": "1.0.*",
     "workerman/coroutine": "^1.1",
     "workerman/workerman": "^5.1"
