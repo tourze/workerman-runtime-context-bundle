@@ -15,7 +15,7 @@ use Workerman\Events\Swow;
 use Workerman\Worker;
 
 #[AsDecorator(decorates: ContextServiceInterface::class)]
-readonly class WorkermanContextService implements ContextServiceInterface
+final readonly class WorkermanContextService implements ContextServiceInterface
 {
     public function __construct(
         #[AutowireDecorated] private ContextServiceInterface $inner,

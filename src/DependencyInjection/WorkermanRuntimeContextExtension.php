@@ -6,7 +6,7 @@ use Symfony\Component\DependencyInjection\Attribute\Autoconfigure;
 use Tourze\SymfonyDependencyServiceLoader\AutoExtension;
 
 #[Autoconfigure(public: true)]
-class WorkermanRuntimeContextExtension extends AutoExtension
+final class WorkermanRuntimeContextExtension extends AutoExtension
 {
     protected function getConfigDir(): string
     {

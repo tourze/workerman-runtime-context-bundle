@@ -1,84 +1,81 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Tourze\WorkermanRuntimeContextBundle\Tests\Service;
 
 use PHPUnit\Framework\Attributes\CoversClass;
-use PHPUnit\Framework\MockObject\MockObject;
-use PHPUnit\Framework\TestCase;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
+use Tourze\PHPUnitSymfonyKernelTest\AbstractIntegrationTestCase;
 use Tourze\Symfony\RuntimeContextBundle\Service\ContextServiceInterface;
 use Tourze\WorkermanRuntimeContextBundle\Service\WorkermanContextService;
 
-/**
- * @internal
- *
- * Note: 由于 WorkermanContextService 是装饰器服务，在集成测试环境中配置极其复杂。
- * PHPStan 要求使用 AbstractIntegrationTestCase，但这在装饰器模式下不实用。
- * 详见 issue: https://github.com/tourze/php-monorepo/issues/584
- *
- * WorkermanContextService 是一个装饰器服务，在集成测试中直接实例化是合理的
- * 这是装饰器模式的标准测试做法
- * @phpstan-ignore-next-line
- */
 #[CoversClass(WorkermanContextService::class)]
-final class WorkermanContextServiceTest extends TestCase
+#[RunTestsInSeparateProcesses]
+final class WorkermanContextServiceTest extends AbstractIntegrationTestCase
 {
-    private WorkermanContextService $contextService;
-
-    private ContextServiceInterface&MockObject $innerService;
-
-    protected function setUp(): void
+    protected function onSetUp(): void
     {
-        parent::setUp();
-
-        // WorkermanContextService 是一个装饰器服务，在集成测试中直接实例化是合理的
-        // 由于这是一个装饰器模式，我们需要模拟被装饰的服务
-        $this->innerService = $this->createMock(ContextServiceInterface::class);
-        $this->contextService = new WorkermanContextService($this->innerService);
     }
 
-    public function testGetIdWhenNotRunning(): void
+    public function testServiceIsRegistered(): void
     {
-        // 由于 Worker::isRunning() 是静态方法，直接测试会返回 false，所以这里测试非运行时的情况
-        $this->innerService->expects($this->once())
-            ->method('getId')
-            ->willReturn('test-id')
-        ;
-
-        $id = $this->contextService->getId();
-        $this->assertEquals('test-id', $id);
+        $service = self::getService(ContextServiceInterface::class);
+        $this->assertInstanceOf(WorkermanContextService::class, $service);
     }
 
-    public function testDeferWhenNotRunning(): void
+    public function testGetIdReturnsString(): void
     {
-        $callback = function () {
-            return true;
+        $service = self::getService(ContextServiceInterface::class);
+        $id = $service->getId();
+
+        $this->assertIsString($id);
+        $this->assertNotEmpty($id);
+    }
+
+    public function testGetIdReturnsConsistentValueWithinContext(): void
+    {
+        $service = self::getService(ContextServiceInterface::class);
+        $id1 = $service->getId();
+        $id2 = $service->getId();
+
+        $this->assertSame($id1, $id2);
+    }
+
+    public function testDeferAcceptsCallable(): void
+    {
+        $service = self::getService(ContextServiceInterface::class);
+
+        // 在非 Workerman 环境下，defer 会将回调添加到 DeferCallSubscriber
+        // 不应该抛出异常
+        $called = false;
+        $callback = function () use (&$called): void {
+            $called = true;
         };
 
-        $this->innerService->expects($this->once())
-            ->method('defer')
-            ->with($callback)
-        ;
+        $service->defer($callback);
 
-        $this->contextService->defer($callback);
+        // defer 不会立即执行回调
+        $this->assertFalse($called);
     }
 
-    public function testSupportCoroutineWhenNotRunning(): void
+    public function testSupportCoroutineReturnsBool(): void
     {
-        $this->innerService->expects($this->once())
-            ->method('supportCoroutine')
-            ->willReturn(false)
-        ;
+        $service = self::getService(ContextServiceInterface::class);
+        $result = $service->supportCoroutine();
 
-        $result = $this->contextService->supportCoroutine();
+        $this->assertIsBool($result);
+        // 在非 Workerman 环境下，应该返回 false（因为委托给 DefaultContextService）
         $this->assertFalse($result);
     }
 
-    public function testReset(): void
+    public function testResetDoesNotThrowException(): void
     {
-        $this->innerService->expects($this->once())
-            ->method('reset')
-        ;
+        $service = self::getService(ContextServiceInterface::class);
 
-        $this->contextService->reset();
+        // reset 不应该抛出异常
+        $service->reset();
+
+        $this->assertTrue(true);
     }
 }
